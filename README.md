@@ -23,6 +23,7 @@ A comprehensive framework for synthetic tabular data generation using state-of-t
 - [Usage](#usage)
 - [Models](#models)
 - [Evaluation](#evaluation)
+- [Running in Google Colab](#running-in-google-colab)
 - [Development](#development)
 - [Contributing](#contributing)
 - [License](#license)
@@ -325,6 +326,70 @@ results = evaluator.evaluate()
 - Accuracy
 - F1 Score
 - AUC-ROC (for binary classification)
+
+## Running in Google Colab
+
+Katabatic notebooks can run on Colab's free T4 GPU without any local setup. There are two paths — choose based on your workflow.
+
+### Path A — VSCode + Google Colab Extension (recommended)
+
+Write and edit notebooks in VSCode while execution runs on a Colab GPU runtime.
+
+1. In VSCode Extensions, search for and install `Google.colab` (publisher: Google)
+2. Open any `.ipynb` (e.g. `examples/ctgan.ipynb`)
+3. Click **Select Kernel** → **Colab** → sign in with Google → choose **T4 GPU**
+4. Add an install cell at the top of the notebook (run once per session):
+
+```python
+import importlib, subprocess, sys
+
+if importlib.util.find_spec("katabatic") is None:
+    # Use requirements-all.txt for GPU models (ctgan, great, tabddpm, etc.)
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q",
+                    "-r", "requirements.txt"], check=True)
+```
+
+5. Data files (`raw_data/`, `discretized_data/`, etc.) must be available in the runtime. Upload them via the Colab file browser, or mount Drive (see Path B, Cell 4).
+
+### Path B — Browser-based Colab
+
+Use `colab_setup.ipynb` in the repo root to initialise a Colab session:
+
+1. Open [colab_setup.ipynb](colab_setup.ipynb) in Google Colab
+2. Edit `REPO_URL` in Cell 2 to point at your fork
+3. Run all cells in order — this mounts Drive, clones/updates the repo, installs deps, and symlinks data dirs
+4. Open any other notebook and run normally
+
+### Requirements files
+
+Two pre-exported requirements files are committed to the repo root:
+
+| File | Contents |
+|---|---|
+| `requirements.txt` | Core dependencies (no heavy model extras) |
+| `requirements-all.txt` | All model extras (ctgan, great, tabddpm, pategan, ganblr, copulagan, tabsyn) |
+
+Use `requirements-all.txt` when running GPU-intensive models. Regenerate after updating `pyproject.toml`:
+
+```bash
+poetry export --without-hashes --output requirements.txt
+poetry export --without-hashes --extras ctgan --extras tabddpm --extras great \
+  --extras pategan --extras ganblr --extras copulagan --extras tabsyn \
+  --output requirements-all.txt
+```
+
+### Python version note
+
+Colab defaults to Python 3.12, but `tensorflow-io 0.31.0` requires Python `<3.12`. You must force Python 3.11 before installing dependencies. Add this cell at the top of `colab_setup.ipynb` (before the pip install cell) and run it once — the runtime will restart automatically:
+
+```python
+!pip install -q condacolab
+import condacolab; condacolab.install_miniforge()
+# After restart:
+# !conda install -y python=3.11
+```
+
+---
 
 ## 🛠 Development
 
