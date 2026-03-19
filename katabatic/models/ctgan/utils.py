@@ -26,7 +26,7 @@ def infer_categorical_columns(df: pd.DataFrame) -> List[str]:
             continue
         if dt.startswith("int"):
             nunique = s.nunique(dropna=True)
-            if nunique <= 20 and nunique / n_rows < 0.05:
+            if nunique / n_rows < 0.05:
                 cat_cols.append(col)
 
     return cat_cols

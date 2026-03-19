@@ -42,14 +42,10 @@ class TSTREvaluation(Evaluation):
         scale_pos_weight = num_neg / num_pos if num_pos > 0 else 1.0
 
         models = {
-            # "LR": LogisticRegression(max_iter=1000, random_state=42),
-            # "MLP": MLPClassifier(hidden_layer_sizes=(100,), early_stopping=True, random_state=42),
-            # "RF": RandomForestClassifier(n_estimators=100, class_weight='balanced', random_state=42),
-            # "XGBoost": XGBClassifier(scale_pos_weight=scale_pos_weight, random_state=42)
-            "LR": LogisticRegression(),
-            "MLP": MLPClassifier(),
-            "RF": RandomForestClassifier(),
-            "XGBoost": XGBClassifier(scale_pos_weight=scale_pos_weight)
+            "LR": LogisticRegression(random_state=42, max_iter=1000),
+            "MLP": MLPClassifier(random_state=42),
+            "RF": RandomForestClassifier(random_state=42),
+            "XGBoost": XGBClassifier(random_state=42, scale_pos_weight=scale_pos_weight)
         }
         for name, model in models.items():
             if name in ["LR", "MLP"]:

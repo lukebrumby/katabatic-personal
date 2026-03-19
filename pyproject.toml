@@ -33,6 +33,8 @@ tomli-w = {version = "^1.0.0", optional = true}
 # === Added for TabDDPM / modern RTDL stack ===
 category-encoders = {version = "^2.8.1", optional = true}
 rtdl_revisiting_models = {version = "0.0.2", optional = true}
+sdv = {version = "^1.17.0", optional = true}
+copulas = {version = "^0.12.0", optional = true}
 
 # Development and testing dependencies (only in dev installs)
 ipykernel = {version = "^6.29.5"}
@@ -51,6 +53,7 @@ codi = ["torch"]
 medgan = ["torch"]
 dev = ["ipykernel", "pytest", "pytest-cov", "pytest-mock"]
 ctgan = ["torch"]
+copulagan = ["sdv", "copulas"]
 
 # TabSyn stack
 tabsyn = ["torch", "scipy", "tqdm", "category-encoders", "tomli", "tomli-w"]
@@ -71,7 +74,9 @@ all = [
   "tomli",
   "tomli-w",
   "rtdl_revisiting_models",
-  "libzero"
+  "libzero",
+  "sdv",
+  "copulas"
 ]
 
 [tool.poetry.group.dev.dependencies]

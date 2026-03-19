@@ -44,6 +44,12 @@ class ModelRegistry:
             'class': 'CTGANModel',
             'dependencies': ['torch', 'sklearn'],
             'extra': 'ctgan'
+        },
+        'copulagan': {
+            'module': 'katabatic.models.copulagan.models',
+            'class': 'CopulaGANModel',
+            'dependencies': ['sdv', 'copulas'],
+            'extra': 'copulagan'
         }
     }
 

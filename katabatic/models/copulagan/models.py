@@ -12,7 +12,6 @@ import warnings
 
 import numpy as np
 import pandas as pd
-import torch
 
 from katabatic.models.base_model import Model as BaseModel
 
@@ -126,6 +125,12 @@ class CopulaGANModel(BaseModel):
         # Initialize synthesizer
         print(f"[CopulaGAN] Initializing CopulaGAN with {self.epochs} epochs...")
 
+        try:
+            import torch as _torch
+            _gpu_available = _torch.cuda.is_available()
+        except ImportError:
+            _gpu_available = False
+
         self.synthesizer = CopulaGANSynthesizer(
             metadata=metadata,
             enforce_min_max_values=True,
@@ -140,7 +145,7 @@ class CopulaGANModel(BaseModel):
             log_frequency=self.log_frequency,
             verbose=self.verbose,
             pac=self.pac,
-            cuda=self.cuda and torch.cuda.is_available(),
+            cuda=self.cuda and _gpu_available,
         )
 
         # Train

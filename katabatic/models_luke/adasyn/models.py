@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 
 from katabatic.models.base_model import Model as BaseModel
+from katabatic.models_luke.adasyn.utils import adjust_n_neighbors, build_resampled_df
 
 warnings.filterwarnings("ignore")
 
@@ -45,6 +46,8 @@ class ADASYNModel(BaseModel):
         self.column_names = None
         self.X_train = None
         self.y_train = None
+        self._X_resampled = None
+        self._y_resampled = None
 
     @classmethod
     def get_required_dependencies(cls) -> list[str]:
@@ -95,14 +98,10 @@ class ADASYNModel(BaseModel):
         self.y_train = y_train
 
         # Check minimum class size and adjust n_neighbors if needed
-        unique_classes, class_counts = np.unique(y_train, return_counts=True)
-        min_class_size = class_counts.min()
-
-        # ADASYN needs n_neighbors < min_class_size
-        adjusted_n = self.n_neighbors
-        if min_class_size <= self.n_neighbors:
-            adjusted_n = max(1, min_class_size - 1)
-            print(f"[ADASYN] Warning: Smallest class has {min_class_size} samples.")
+        adjusted_n = adjust_n_neighbors(y_train, self.n_neighbors)
+        if adjusted_n != self.n_neighbors:
+            unique_classes, class_counts = np.unique(y_train, return_counts=True)
+            print(f"[ADASYN] Warning: Smallest class has {int(class_counts.min())} samples.")
             print(
                 f"[ADASYN] Adjusting n_neighbors from {self.n_neighbors} to {adjusted_n}"
             )
@@ -144,24 +143,19 @@ class ADASYNModel(BaseModel):
             synth_dir = os.path.join("synthetic", dataset_name, "adasyn")
         os.makedirs(synth_dir, exist_ok=True)
 
-        print(f"[ADASYN] Generated {n_synthetic} new synthetic samples...")
+        print(f"[ADASYN] Generated {n_synthetic} new synthetic samples.")
         print(
-            f"[ADASYN] Returning {len(X_train)} total samples (original size with balanced classes)..."
+            f"[ADASYN] Returning {len(X_resampled)} total samples (original + synthetic minority)."
         )
 
-        # Sample to match original size but with balanced classes
-        if len(X_resampled) > len(X_train):
-            indices = np.random.choice(len(X_resampled), len(X_train), replace=False)
-            X_final = X_resampled[indices]
-            y_final = y_resampled[indices]
-        else:
-            X_final = X_resampled
-            y_final = y_resampled
+        # Store for sample()
+        self._X_resampled = X_resampled
+        self._y_resampled = y_resampled
+        X_final = X_resampled
+        y_final = y_resampled
 
         # Convert to DataFrame
-        df_synth = pd.DataFrame(
-            np.column_stack([X_final, y_final]), columns=self.column_names
-        )
+        df_synth = build_resampled_df(X_final, y_final, self.column_names)
 
         # Split into X and y
         label = df.columns[-1]
@@ -186,7 +180,7 @@ class ADASYNModel(BaseModel):
                 "sampling_strategy": self.sampling_strategy,
                 "n_original": len(X_train),
                 "n_synthetic": n_synthetic,
-                "n_returned": len(X_final),
+                "n_returned": len(X_resampled),
             },
         }
         with open(os.path.join(synth_dir, "metadata.json"), "w", encoding="utf-8") as f:
@@ -208,35 +202,13 @@ class ADASYNModel(BaseModel):
         *args,
         **kwargs,
     ) -> pd.DataFrame:
-        """Generate synthetic samples."""
-        if not self.is_fitted or self.adasyn is None:
+        """Return the full resampled dataset (original + synthetic minority samples)."""
+        if not self.is_fitted or self._X_resampled is None:
             raise RuntimeError("Call train() before sample().")
 
-        # ADASYN generates by resampling
-        try:
-            X_resampled, y_resampled = self.adasyn.fit_resample(
-                self.X_train, self.y_train
-            )
-        except ValueError:
-            # No resampling needed
-            return pd.DataFrame(
-                np.column_stack([self.X_train, self.y_train]), columns=self.column_names
-            )
+        X, y = self._X_resampled, self._y_resampled
+        if n is not None and n < len(X):
+            idx = np.random.choice(len(X), n, replace=False)
+            X, y = X[idx], y[idx]
 
-        # Extract only synthetic samples
-        n_original = len(self.X_train)
-        X_synth = X_resampled[n_original:]
-        y_synth = y_resampled[n_original:]
-
-        # If n specified, sample that many
-        if n is not None and n < len(X_synth):
-            indices = np.random.choice(len(X_synth), n, replace=False)
-            X_synth = X_synth[indices]
-            y_synth = y_synth[indices]
-
-        # Convert to DataFrame
-        df_synth = pd.DataFrame(
-            np.column_stack([X_synth, y_synth]), columns=self.column_names
-        )
-
-        return df_synth
+        return build_resampled_df(X, y, self.column_names)
