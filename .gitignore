@@ -9,7 +9,7 @@ outputs/
 trainer_great/
 synthetic/
 sample_data/
-raw_data/
+# raw_data/ — tracked in personal repo for Colab access
 discretized_data/
 encoded_data/
 
