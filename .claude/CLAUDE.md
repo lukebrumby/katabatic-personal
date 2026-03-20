@@ -6,14 +6,8 @@
 - Always run `poetry run pytest` before marking any task complete
 - Models under `models_luke/` are Luke's working copies — do NOT auto-mirror to `models/` without being asked
 
-## Git Remotes — READ BEFORE ANY PUSH
-There are two remotes. NEVER confuse them:
-- `origin`   → https://github.com/katabatic-mentorship/katabatic-mentorship-repo.git — TEAM REPO. Only push branches that are ready for the team to see.
-- `personal` → https://github.com/lukebrumby/katabatic-personal.git — Luke's private repo for Colab/GPU work. Push freely here.
-
-When pushing, always specify the remote explicitly:
-  git push personal <branch>   ← safe, Luke's private repo
-  git push origin <branch>     ← team repo — confirm with Luke first
+## Git Remotes
+- `origin` → https://github.com/lukebrumby/katabatic-personal.git — Luke's repo. Push freely.
 
 ## Project Overview
 Katabatic is a Python framework for training generative models on tabular data and evaluating them via TSTR (Train on Synthetic, Test on Real). It provides a unified pipeline that splits raw datasets, trains a synthetic data model, generates synthetic samples, then evaluates downstream classifier performance trained on synthetic data and tested on real data. It is used for research into tabular data synthesis methods (GANs, diffusion, LLM-based, etc.).
