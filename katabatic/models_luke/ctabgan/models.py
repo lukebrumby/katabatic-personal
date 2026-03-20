@@ -4,9 +4,8 @@ Based on: https://github.com/Team-TUD/CTAB-GAN
 """
 
 from __future__ import annotations
-from typing import Any, Optional, Dict, List, Tuple
+from typing import Optional, Tuple
 import os
-import json
 import warnings
 import time
 
@@ -14,6 +13,7 @@ import numpy as np
 import pandas as pd
 
 from katabatic.models.base_model import Model as BaseModel
+from .utils import detect_column_types, save_metadata
 
 warnings.filterwarnings("ignore")
 
@@ -65,43 +65,6 @@ class CTABGANModel(BaseModel):
     def get_required_dependencies(cls) -> list[str]:
         return ["torch", "sklearn", "tqdm"]
 
-    def _detect_column_types(self, df: pd.DataFrame) -> None:
-        """Auto-detect column types from the data."""
-        self.categorical_columns = []
-        self.integer_columns = []
-        self.mixed_columns = {}
-
-        for col in df.columns[:-1]:  # Exclude last column (target)
-            dtype = df[col].dtype
-            n_unique = df[col].nunique()
-
-            # Categorical: object type or low cardinality
-            if dtype == "object" or (dtype in ["int64", "int32"] and n_unique < 20):
-                self.categorical_columns.append(col)
-
-            # Integer columns
-            elif dtype in ["int64", "int32"]:
-                self.integer_columns.append(col)
-
-            # Mixed columns: continuous with many zeros
-            elif dtype in ["float64", "float32"]:
-                zero_ratio = (df[col] == 0).sum() / len(df)
-                if zero_ratio > 0.3:
-                    self.mixed_columns[col] = [0.0]
-                    if col not in self.integer_columns:
-                        self.integer_columns.append(col)
-
-        # Add target column to categoricals if appropriate
-        target_col = df.columns[-1]
-        if df[target_col].dtype == "object" or df[target_col].nunique() < 20:
-            if target_col not in self.categorical_columns:
-                self.categorical_columns.append(target_col)
-
-        print(f"[CTAB-GAN] Detected column types:")
-        print(f"  Categorical: {self.categorical_columns}")
-        print(f"  Integer: {self.integer_columns}")
-        print(f"  Mixed: {list(self.mixed_columns.keys())}")
-
     def train(
         self,
         data_dir: str,
@@ -132,7 +95,13 @@ class CTABGANModel(BaseModel):
             df = pd.concat([X, y[y_col]], axis=1)
 
         self.raw_df = df.copy()
-        self._detect_column_types(df)
+        self.categorical_columns, self.integer_columns, self.mixed_columns = (
+            detect_column_types(df)
+        )
+        print(f"[CTAB-GAN] Detected column types:")
+        print(f"  Categorical: {self.categorical_columns}")
+        print(f"  Integer: {self.integer_columns}")
+        print(f"  Mixed: {list(self.mixed_columns.keys())}")
 
         # Set problem type
         target_col = df.columns[-1]
@@ -207,24 +176,25 @@ class CTABGANModel(BaseModel):
         y_synth.to_csv(y_path_out, index=False, header=True)
 
         # Save metadata
-        meta = {
-            "schema": {
-                "columns": df.columns.tolist(),
-                "label": label,
-                "dtypes": {c: str(df[c].dtype) for c in df.columns},
-                "categorical_columns": self.categorical_columns,
-                "integer_columns": self.integer_columns,
-                "mixed_columns": list(self.mixed_columns.keys()),
+        save_metadata(
+            os.path.join(synth_dir, "metadata.json"),
+            {
+                "schema": {
+                    "columns": df.columns.tolist(),
+                    "label": label,
+                    "dtypes": {c: str(df[c].dtype) for c in df.columns},
+                    "categorical_columns": self.categorical_columns,
+                    "integer_columns": self.integer_columns,
+                    "mixed_columns": list(self.mixed_columns.keys()),
+                },
+                "training": {
+                    "epochs": self.epochs,
+                    "batch_size": self.batch_size,
+                    "random_dim": self.random_dim,
+                    "num_channels": self.num_channels,
+                },
             },
-            "training": {
-                "epochs": self.epochs,
-                "batch_size": self.batch_size,
-                "random_dim": self.random_dim,
-                "num_channels": self.num_channels,
-            },
-        }
-        with open(os.path.join(synth_dir, "metadata.json"), "w", encoding="utf-8") as f:
-            json.dump(meta, f, indent=2)
+        )
 
         print(
             f"[CTAB-GAN] Synthetic data saved:\n  X -> {x_path_out}\n  y -> {y_path_out}"
