@@ -6,7 +6,6 @@ Uses SDV's GaussianCopulaSynthesizer (statistical, no neural networks)
 from __future__ import annotations
 from typing import Optional
 import os
-import json
 import time
 import warnings
 
@@ -14,6 +13,7 @@ import numpy as np
 import pandas as pd
 
 from katabatic.models.base_model import Model as BaseModel
+from katabatic.models_luke.gaussian_copula.utils import save_metadata
 
 warnings.filterwarnings("ignore")
 
@@ -141,19 +141,11 @@ class GaussianCopulaModel(BaseModel):
         y_synth.to_csv(y_path_out, index=False, header=True)
 
         # Save metadata
-        meta = {
-            "schema": {
-                "columns": df.columns.tolist(),
-                "label": label,
-                "dtypes": {c: str(df[c].dtype) for c in df.columns},
-            },
-            "training": {
-                "default_distribution": self.default_distribution,
-                "method": "Gaussian Copula (statistical)",
-            },
-        }
-        with open(os.path.join(synth_dir, "metadata.json"), "w", encoding="utf-8") as f:
-            json.dump(meta, f, indent=2)
+        save_metadata(
+            os.path.join(synth_dir, "metadata.json"),
+            df,
+            self.default_distribution,
+        )
 
         print(
             f"[GaussianCopula] Synthetic data saved:\n  X -> {x_path_out}\n  y -> {y_path_out}"

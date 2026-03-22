@@ -74,8 +74,7 @@ class CTABGANModel(BaseModel):
     ) -> "CTABGANModel":
         """Train the CTAB-GAN model."""
 
-        from .ctabgan_synthesizer import CTABGANSynthesizer
-        from .data_preparation import DataPrep
+        from .utils import CTABGANSynthesizer, DataPrep
 
         # Load training data
         train_full = os.path.join(data_dir, "train_full.csv")
