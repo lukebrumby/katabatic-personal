@@ -148,10 +148,18 @@ class ForestDiffusionModel(BaseModel):
         print(f"  Integer: {self.int_indexes}")
 
         # Convert to numpy; factorize object-typed columns
-        data = df.values.copy().astype(float, errors="ignore")
+        data = df.copy().to_numpy(dtype=object)
         for idx, uniques in cat_mappings.items():
             codes = pd.Categorical(df.iloc[:, idx], categories=uniques).codes
             data[:, idx] = codes
+
+        # Ensure numeric values for model input when possible
+        try:
+            data = data.astype(float)
+        except (ValueError, TypeError):
+            # Some columns may still be non-numeric (e.g. string labels);
+            # features will be cast to float later before training.
+            pass
 
         # Separate X and y
         X_data = data[:, :-1].astype(float)
