@@ -116,6 +116,10 @@ class TVAEModel(BaseModel):
         print("[TVAE] Creating metadata...")
         metadata = SingleTableMetadata()
         metadata.detect_from_dataframe(df)
+        # SDV auto-detects integer labels as 'numerical' (continuous), which causes
+        # TVAE to generate out-of-range values after rounding. Force categorical so
+        # only the original label values are ever generated.
+        metadata.update_column(column_name=label_col, sdtype='categorical')
 
         # Resolve GPU availability
         try:
